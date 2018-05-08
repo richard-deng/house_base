@@ -21,8 +21,6 @@ class BoxList:
         'name': T_STR,
         'icon': T_STR,
         'priority': T_INT,
-        'cadmin': T_INT,
-        'uadmin': T_INT,
     }
     OPTION_KEY = {
         'available': T_INT,

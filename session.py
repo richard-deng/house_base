@@ -169,14 +169,14 @@ def house_check_session_for_page(redis_pool, cookie_conf):
                     flag = False
 
                 if not flag:
-                    self.redirect('/house/v1/page/login.html')
+                    self.redirect('/mis/v1/page/login.html')
 
                 ret = func(self, *args, **kwargs)
                 return ret
             except:
                 log.warn(traceback.format_exc())
                 log.debug('raise except to redirect')
-                self.redirect('/house/v1/page/login.html')
+                self.redirect('/mis/v1/page/login.html')
         return _
     return f
 
