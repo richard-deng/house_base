@@ -1,9 +1,6 @@
 # coding: utf-8
 import datetime
 import calendar
-from define import BANK_CARD_MAP
-from define import FOREIGN_MAP
-
 
 def trans_time(data, datetime_keys):
     if not data:
@@ -40,16 +37,5 @@ def trans_amt(data):
     amount = txamt / 100.0
     txamt = '%.2f' % amount
     data['txamt'] = txamt
-    return data
-
-
-def trans_bank_card_info(data):
-    if 'cardtp' in data.keys() and 'foreign' in data.keys():
-        data['cardtp_desc'] = BANK_CARD_MAP.get(data['cardtp'])
-        data['foreign_desc'] = FOREIGN_MAP.get(str(data['foreign']))
-    else:
-        data['cardtp_desc'] = ''
-        data['foreign_desc'] = ''
-
     return data
 
