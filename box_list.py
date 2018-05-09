@@ -58,8 +58,12 @@ class BoxList:
         keep_fields = ['id', 'name', 'icon', 'priority', 'available', 'box_type']
         with get_connection_exception(TOKEN_HOUSE_CORE) as conn:
             ret = conn.select(table=BoxList.TABLE, fields=keep_fields, where=where, other=other)
+            if ret:
+                for item in ret:
+                    cls.to_string(item)
             return ret
 
+    @classmethod
     def to_string(self, data):
         if not data:
             return
