@@ -96,7 +96,7 @@ class TextInfo(object):
             table_id = createid.new_id64(conn=conn)
             values['id'] = table_id
             ret = conn.insert(table=TextInfo.TABLE, values=values)
-            return ret
+            return ret, table_id
 
     @classmethod
     def page(cls, **kwargs):
