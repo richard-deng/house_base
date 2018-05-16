@@ -3,7 +3,7 @@ import copy
 import logging
 import datetime
 
-from define import TOKEN_HOUSE_CORE
+from define import TOKEN_HOUSE_CORE, TEXT_TITLE_ENABLE
 from text_detail import TextDetail
 from zbase.base.dbpool import get_connection_exception
 from zbase.web.validator import T_INT, T_STR
@@ -54,7 +54,7 @@ class TextInfo(object):
 
     @classmethod
     def load_by_box_id(cls, box_id):
-        where = {'box_id': box_id}
+        where = {'box_id': box_id, 'available': TEXT_TITLE_ENABLE}
         keep_fields = copy.deepcopy(TextInfo.KEYS)
         if TextInfo.TABLE_ID not in keep_fields:
             keep_fields.append(TextInfo.TABLE_ID)
@@ -96,7 +96,7 @@ class TextInfo(object):
             table_id = createid.new_id64(conn=conn)
             values['id'] = table_id
             ret = conn.insert(table=TextInfo.TABLE, values=values)
-            return ret
+            return ret, table_id
 
     @classmethod
     def page(cls, **kwargs):
