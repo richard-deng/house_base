@@ -54,7 +54,8 @@ class BoxList:
     @classmethod
     def load_all(cls, where):
         # where = {'available': define.BOX_ENABLE}
-        other = ' order by priority desc '
+        # other = ' order by priority desc '
+        other = ' order by priority '
         keep_fields = ['id', 'name', 'icon', 'priority', 'available', 'box_type']
         with get_connection_exception(TOKEN_HOUSE_CORE) as conn:
             ret = conn.select(table=BoxList.TABLE, fields=keep_fields, where=where, other=other)
