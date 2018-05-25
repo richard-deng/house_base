@@ -4,9 +4,11 @@ import random
 import string
 import hashlib
 import logging
+import traceback
 
 import tools
 from define import TOKEN_HOUSE_CORE
+from profile import Profile
 from zbase.base.dbpool import get_connection_exception
 from zbase.web.validator import T_INT, T_STR
 
@@ -108,3 +110,25 @@ class User:
         with get_connection_exception(TOKEN_HOUSE_CORE) as conn:
             record = conn.select_one(table=User.TABLE, fields=keep_fields, where=where)
             self.data = tools.trans_time(record, User.DATETIME_KEY)
+
+    def update(self, value):
+        where = {'id': self.userid}
+        with get_connection_exception(TOKEN_HOUSE_CORE) as conn:
+            ret = conn.update(table=User.TABLE, values=value, where=where)
+            return ret
+
+    @classmethod
+    def create(cls, user, profile):
+        with get_connection_exception(TOKEN_HOUSE_CORE) as conn:
+            try:
+                conn.start()
+                conn.insert(table=User.TABLE, values=user)
+                userid = conn.last_insert_id()
+                profile['userid'] = userid
+                conn.insert(table=Profile.TABLE, values=profile)
+                conn.commit()
+                return True, userid
+            except Exception:
+                log.warn(traceback.format_exc())
+                conn.rollback()
+                return False, None

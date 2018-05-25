@@ -86,7 +86,7 @@ class SUser:
             return False
 
         self.load_user()
-        if self.udata["state"] != define.POSP_USER_STATE_OK:
+        if self.udata["state"] != define.HOUSE_USER_STATE_OK:
             log.debug("func=check_permission|user state error")
             self.se.rm_session()
             return False
