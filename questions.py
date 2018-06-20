@@ -51,16 +51,18 @@ class Questions:
 
     @classmethod
     def load_root(cls):
-        where = {'parent': -1}
+        where = {'parent': -1, 'status': define.QUESTION_ENABLE}
         # keep_fields = copy.deepcopy(Questions.KEYS)
         keep_fields = ['id', 'name', 'category']
         if Questions.TABLE_ID not in keep_fields:
             keep_fields.append(Questions.TABLE_ID)
 
         with get_connection_exception(TOKEN_HOUSE_CORE) as conn:
-            record = conn.select_one(table=Questions.TABLE, fields=keep_fields, where=where)
-            cls.data = record
-            cls.to_string(cls.data)
+            records = conn.select(table=Questions.TABLE, fields=keep_fields, where=where)
+            if records:
+                for record in records:
+                    cls.to_string(record)
+            return records
 
     @classmethod
     def load_children(cls, parent):
@@ -86,15 +88,15 @@ class Questions:
 
     @classmethod
     def load_all(cls):
-        cls.load_root()
-        root = cls.data
-        root['children'] = []
-        root['text'] = root.get('name')
-        root_id = root.get('id')
-        children = cls.load_children(root_id)
-        root['children'] = children
-        log.debug('children=%s', children)
-        return root
+        roots = cls.load_root()
+        for root in roots:
+            root['children'] = []
+            root['text'] = root.get('name')
+            root_id = root.get('id')
+            children = cls.load_children(root_id)
+            root['children'] = children
+            log.debug('children=%s', children)
+        return roots
 
     @classmethod
     def load_by_parent_single(cls, parent):
