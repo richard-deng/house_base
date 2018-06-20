@@ -67,6 +67,7 @@ class TextInfo(object):
                     detail = TextDetail.load_by_text_id(item['id'])
                     item.update({
                         'content': detail.data.get('content') if detail.data else '',
+                        'text_id': str(item['id']),
                     })
                     cls.to_string(item)
             return cls
