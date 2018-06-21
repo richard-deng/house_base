@@ -66,6 +66,7 @@ class Questions:
 
     @classmethod
     def load_children(cls, parent):
+        # 1是问题, 2是答案, 3是描述
         where = {'parent': parent, 'status': define.QUESTION_ENABLE}
         # keep_fields = copy.deepcopy(Questions.KEYS)
         keep_fields = ['id', 'name', 'category']
@@ -80,8 +81,10 @@ class Questions:
                     record['text'] = record['name']
                     if record['category'] == 1:
                         record['icon'] = 'glyphicon glyphicon-question-sign'
-                    else:
+                    elif record['category'] == 2:
                         record['icon'] = 'glyphicon glyphicon-info-sign'
+                    else:
+                        record['icon'] = 'glyphicon glyphicon-comment'
                     record['children'] = []
                     record['children'].extend(cls.load_children(record.get('id')))
             return records
