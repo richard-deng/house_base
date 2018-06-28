@@ -2,7 +2,7 @@
 import copy
 import logging
 import datetime
-
+import tools
 from define import TOKEN_HOUSE_CORE
 from zbase.base.dbpool import get_connection_exception
 from zbase.web.validator import T_FLOAT, T_STR
@@ -41,6 +41,21 @@ class RateInfo(object):
             record = conn.select_one(table=RateInfo.TABLE, fields=keep_fields, where=where)
             self.data = record
             self.to_string(self.data)
+            tools.trans_time(self.data, RateInfo.DATETIME_KEY)
+
+    @classmethod
+    def load_all(cls):
+        keep_fields = copy.deepcopy(RateInfo.KEYS)
+        if RateInfo.TABLE_ID not in keep_fields:
+            keep_fields.append(RateInfo.TABLE_ID)
+        with get_connection_exception(TOKEN_HOUSE_CORE) as conn:
+            records = conn.select(table=RateInfo.TABLE, fields=keep_fields)
+            if records:
+                for data in records:
+                    cls.to_string(data)
+                    tools.trans_time(data, cls.DATETIME_KEY)
+            return records
+
 
     @classmethod
     def to_string(cls, data):
