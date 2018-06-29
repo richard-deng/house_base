@@ -67,6 +67,15 @@ class RateInfo(object):
             cls.data = ret
             return cls
 
+    @classmethod
+    def name_to_value(cls):
+        result = {}
+        records = cls.load_all()
+        if records:
+            for record in records:
+                result[record['name']] = record
+        return result
+
 
     @classmethod
     def to_string(cls, data):
