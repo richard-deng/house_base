@@ -30,6 +30,7 @@ class Questions:
     }
     QUERY_KEY = {
         'name': T_STR,
+        'parent': T_INT,
     }
     KEYS = MUST_KEY.keys() + OPTION_KEY.keys() + DATETIME_KEY.keys()
 
@@ -133,3 +134,34 @@ class Questions:
         with get_connection_exception(TOKEN_HOUSE_CORE) as conn:
             ret = conn.update(table=Questions.TABLE, values=values, where=where)
             return ret
+
+    @classmethod
+    def page(cls, **kwargs):
+        need_query = cls.QUERY_KEY.keys()
+        where = {'status': define.QUESTION_ENABLE}
+        for k, v in kwargs.iteritems():
+            if k in need_query and kwargs.get(k):
+                where[k] = kwargs.get(k)
+        other = kwargs.get('other', '')
+        page = kwargs.get('page', 1)
+        page_size = kwargs.get('maxnum', 10)
+        log.debug('QUESTION_KEY=%s', cls.KEYS)
+        keep_fields = copy.deepcopy(cls.KEYS)
+        if cls.TABLE_ID not in keep_fields:
+            keep_fields.append(cls.TABLE_ID)
+        log.debug('keep_fields=%s', keep_fields)
+        with get_connection_exception(TOKEN_HOUSE_CORE) as conn:
+            sql = conn.select_sql(table=cls.TABLE, where=where, fields=keep_fields, other=other)
+            pager = conn.select_page(sql, pagecur=page, pagesize=page_size)
+            pager.split()
+            return pager.pagedata.data, pager.count
+
+    def find_parent_parent(self):
+        if self.data:
+            with get_connection_exception(TOKEN_HOUSE_CORE) as conn:
+                record = conn.select_one(table=self.TABLE, where={'id': self.data['parent']})
+                if record:
+                    return record['parent']
+                return -1
+        else:
+            return -1

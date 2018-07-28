@@ -22,6 +22,7 @@ class BoxList:
         'icon': T_STR,
         'priority': T_INT,
         'box_type': T_INT,
+        'parent': T_INT,
     }
     OPTION_KEY = {
         'available': T_INT,
@@ -32,6 +33,7 @@ class BoxList:
     }
     QUERY_KEY = {
         'name': T_STR,
+        'parent': T_INT,
     }
     KEYS = MUST_KEY.keys() + OPTION_KEY.keys() + DATETIME_KEY.keys()
 
