@@ -34,7 +34,7 @@ class Weixin(object):
             'mch_id': self.mch_id,
             'nonce_str': self.gen_nonce_str(),
             'sign_type': 'MD5',
-            'body': body,
+            'body': unicode(body, 'utf-8'),
             'out_trade_no': syssn,
             'total_fee': txamt,
             'spbill_create_ip': '127.0.0.1',
@@ -70,12 +70,14 @@ class Weixin(object):
         return sign
 
     def new_dict_to_xml(self, indata):
+        log.debug("new_dict_to_xml=%s", indata)
         from lxml import etree
         from lxml.etree import CDATA
         root = etree.Element("xml")
         for k, v in indata.items():
             field = etree.SubElement(root, str(k))
             nv = str(v) if type(v) not in types.StringTypes else v
+            log.debug("new_dict_to_xml=%s", nv)
             if k == 'detail':
                 field.text = CDATA(nv)
             else:
@@ -193,7 +195,8 @@ class Precreate(Weixin):
                 'nonceStr': self.gen_nonce_str(),
                 'package': '',
                 'signType': 'MD5',
-                'paySign': ''
+                'paySign': '',
+                'syssn': '',
             }
 
             syssn = tools.create_syssn()
@@ -201,6 +204,7 @@ class Precreate(Weixin):
             if not flag:
                 msg = u'创建交易订单错误'
                 return False, msg, None
+            result['syssn'] = syssn
 
             req_str = self.build_req(openid, order_name, txamt, syssn)
             resp_str = self.send(method=self.method, url=self.url, req_str=req_str, headers=self.headers)
@@ -265,26 +269,26 @@ class Query(Weixin):
 
         trade_state = obj['trade_state']
         out_trade_no = obj['out_trade_no']
+        trade_state_desc = obj.get('trade_state_desc')
         if trade_state != 'SUCCESS':
             if trade_state == 'NOTPAY':
                 trade_update['retcd'] = define.XC_ERR_CUSTOMER_CANCEL
                 trade_update['status'] = define.XC_TRADE_FAILED
-                trade_update['err_desc'] = define.XC_ERR_STATE[define.XC_ERR_CUSTOMER_CANCEL]
+                trade_update['err_desc'] = trade_state_desc if trade_state_desc else define.XC_ERR_STATE[define.XC_ERR_CUSTOMER_CANCEL]
             elif trade_state == 'CLOSED':
                 trade_update['retcd'] = define.XC_ERR_ORDER_CLOSE
                 trade_update['status'] = define.XC_TRADE_FAILED
-                trade_update['err_desc'] = define.XC_ERR_STATE[define.XC_ERR_ORDER_CLOSE]
+                trade_update['err_desc'] = trade_state_desc if trade_state_desc else define.XC_ERR_STATE[define.XC_ERR_ORDER_CLOSE]
             elif trade_state == 'USERPAYING':
                 trade_update['retcd'] = define.XC_ERR_ORDER_WAIT_PAY
-                trade_update['err_desc'] = define.XC_ERR_STATE[define.XC_ERR_ORDER_WAIT_PAY]
+                trade_update['err_desc'] = trade_state_desc if trade_state_desc else define.XC_ERR_STATE[define.XC_ERR_ORDER_WAIT_PAY]
             elif trade_state == 'PAYERROR':
                 trade_update['retcd'] = define.XC_ERR_ORDER_FAIL
                 trade_update['status'] = define.XC_TRADE_FAILED
-                trade_update['err_desc'] = u'支付失败'
+                trade_update['err_desc'] = trade_state_desc if trade_state_desc else u'支付失败'
             else:
                 log.warn('syssn=%s|trade_state=%s|not deal', out_trade_no, trade_state)
         else:
-            trade_state_desc = obj['trade_state_desc']
             trade_update['retcd'] = define.XC_OK
             trade_update['status'] = define.XC_TRADE_SUCC
             trade_update['err_desc'] = trade_state_desc
@@ -339,6 +343,7 @@ class Query(Weixin):
                         'err_desc': record.data['err_desc']
                     }
             log.info('func=run|normal|result=%s', result)
+            return result
         except Exception:
             log.warn(traceback.format_exc())
             result['retcd'] = define.XC_ERR_CHANNEL_QUERY

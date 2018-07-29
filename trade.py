@@ -110,7 +110,7 @@ class TradeOrder(object):
             log.info('openid=%s|records=%s', openid, records)
             if records:
                 for record in records:
-                    cls.to_string(record)
-                    tools.trans_time(record, 'sysdtm')
+                    # cls.to_string(record)
+                    tools.trans_time(record, cls.DATETIME_KEY)
                     tools.trans_amt(record)
             return records
