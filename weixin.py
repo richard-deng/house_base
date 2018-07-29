@@ -218,3 +218,42 @@ class Precreate(Weixin):
             log.warn(traceback.format_exc())
             msg = u'服务错误'
             return False, msg, None
+
+
+class Query(Weixin):
+
+    url = 'https://api.mch.weixin.qq.com/pay/orderquery'
+
+    def build_req(self, out_trade_no):
+        log.info('func=build_req|out_trade_no=%s', out_trade_no)
+        data = {
+            'appid': self.appid,
+            'mch_id': self.mch_id,
+            'out_trade_no': out_trade_no,
+            'nonce_str': self.gen_nonce_str(),
+            'sign': '',
+            'sign_type': 'MD5'
+        }
+        sign = self.make_sign(data, self.api_key)
+        data['sign'] = sign
+        log.info('func=build_req|data=%s', data)
+        return data
+
+    def parse_resp(self, resp_str):
+        result = {}
+        obj = xmltodict.parse(resp_str, 'utf-8')
+        obj = obj['xml']
+        return_code = obj['return_code']
+        return_msg = obj['return_msg']
+        if return_code != 'SUCCESS':
+            result['err_desc'] = return_msg
+            return False, return_msg, result
+
+        result_code = obj['result_code']
+        if result_code != 'SUCCESS':
+            err_code_des = obj['err_code_des']
+            return False, err_code_des, ''
+
+        trade_state = obj['trade_state']
+        if trade_state != 'SUCCESS':
+            pass
