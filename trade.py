@@ -7,7 +7,6 @@ import tools
 from define import TOKEN_HOUSE_CORE
 from zbase.base.dbpool import get_connection_exception
 from zbase.web.validator import T_INT, T_STR
-from zbase.utils import createid
 
 log = logging.getLogger()
 
@@ -55,7 +54,7 @@ class TradeOrder(object):
 
     def load(self):
         where = {'syssn': self.syssn}
-        keep_fields = copy.deepcopy(Order.KEYS)
+        keep_fields = copy.deepcopy(self.KEYS)
         if self.TABLE_ID not in keep_fields:
             keep_fields.append(self.TABLE_ID)
 
@@ -96,3 +95,22 @@ class TradeOrder(object):
             return
         data['id'] = str(data['id'])
         tools.trans_time(data, cls.DATETIME_KEY)
+
+    @classmethod
+    def load_by_openid(cls, openid):
+        where = {'openid': openid}
+        keep_fields =[
+            'syssn', 'consumer_name', 'consumer_mobile',
+            'order_name', 'order_desc', 'openid', 'txamt',
+            'retcd', 'status', 'cancel', 'origssn',
+            'sysdtm',
+        ]
+        with get_connection_exception(TOKEN_HOUSE_CORE) as conn:
+            records = conn.select(table=cls.TABLE, fields=keep_fields, where=where)
+            log.info('openid=%s|records=%s', openid, records)
+            if records:
+                for record in records:
+                    cls.to_string(record)
+                    tools.trans_time(record, 'sysdtm')
+                    tools.trans_amt(record)
+            return records

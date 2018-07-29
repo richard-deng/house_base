@@ -222,38 +222,128 @@ class Precreate(Weixin):
 
 class Query(Weixin):
 
+    method = 'POST'
     url = 'https://api.mch.weixin.qq.com/pay/orderquery'
+    headers = {'Content-Type': 'application/x-www-form-urlencoded'}
 
-    def build_req(self, out_trade_no):
-        log.info('func=build_req|out_trade_no=%s', out_trade_no)
+    def build_req(self, syssn):
+        log.info('func=build_req|out_trade_no=%s', syssn)
         data = {
             'appid': self.appid,
             'mch_id': self.mch_id,
-            'out_trade_no': out_trade_no,
+            'out_trade_no': syssn,
             'nonce_str': self.gen_nonce_str(),
             'sign': '',
             'sign_type': 'MD5'
         }
         sign = self.make_sign(data, self.api_key)
         data['sign'] = sign
-        log.info('func=build_req|data=%s', data)
-        return data
+        log.info("func=build_req|with sign data=%s", data)
+        xml_str = self.new_dict_to_xml(data)
+        log.info("func=build_req|xml_str=%s", xml_str)
+        return xml_str
 
     def parse_resp(self, resp_str):
-        result = {}
+        trade_update = {}
         obj = xmltodict.parse(resp_str, 'utf-8')
         obj = obj['xml']
         return_code = obj['return_code']
         return_msg = obj['return_msg']
         if return_code != 'SUCCESS':
-            result['err_desc'] = return_msg
-            return False, return_msg, result
+            trade_update['retcd'] = define.XC_ERR_ORDER_FAIL
+            trade_update['status'] = define.XC_TRADE_FAILED
+            trade_update['err_desc'] = return_msg
+            return trade_update
 
         result_code = obj['result_code']
         if result_code != 'SUCCESS':
             err_code_des = obj['err_code_des']
-            return False, err_code_des, ''
+            trade_update['retcd'] = define.XC_ERR_ORDER_FAIL
+            trade_update['status'] = define.XC_TRADE_FAILED
+            trade_update['err_desc'] = err_code_des
+            return trade_update
 
         trade_state = obj['trade_state']
+        out_trade_no = obj['out_trade_no']
         if trade_state != 'SUCCESS':
-            pass
+            if trade_state == 'NOTPAY':
+                trade_update['retcd'] = define.XC_ERR_CUSTOMER_CANCEL
+                trade_update['status'] = define.XC_TRADE_FAILED
+                trade_update['err_desc'] = define.XC_ERR_STATE[define.XC_ERR_CUSTOMER_CANCEL]
+            elif trade_state == 'CLOSED':
+                trade_update['retcd'] = define.XC_ERR_ORDER_CLOSE
+                trade_update['status'] = define.XC_TRADE_FAILED
+                trade_update['err_desc'] = define.XC_ERR_STATE[define.XC_ERR_ORDER_CLOSE]
+            elif trade_state == 'USERPAYING':
+                trade_update['retcd'] = define.XC_ERR_ORDER_WAIT_PAY
+                trade_update['err_desc'] = define.XC_ERR_STATE[define.XC_ERR_ORDER_WAIT_PAY]
+            elif trade_state == 'PAYERROR':
+                trade_update['retcd'] = define.XC_ERR_ORDER_FAIL
+                trade_update['status'] = define.XC_TRADE_FAILED
+                trade_update['err_desc'] = u'支付失败'
+            else:
+                log.warn('syssn=%s|trade_state=%s|not deal', out_trade_no, trade_state)
+        else:
+            trade_state_desc = obj['trade_state_desc']
+            trade_update['retcd'] = define.XC_OK
+            trade_update['status'] = define.XC_TRADE_SUCC
+            trade_update['err_desc'] = trade_state_desc
+
+        return trade_update
+
+    def update_trade(self, syssn, trade_update):
+        to = TradeOrder(syssn=syssn)
+        ret = to.update(trade_update)
+        if ret == 1:
+            return True
+        return False
+
+    def run(self, syssn):
+        result = {}
+        try:
+            log.info('func=run|syssn=%s', syssn)
+            record = TradeOrder(syssn=syssn)
+            log.info('func=run|syssn=%s|data=%s', syssn, record.data)
+            if not record.data:
+                log.info('func=run|syssn=%s|not exists', syssn)
+                result['retcd'] = define.XC_ERR_TRADE_NOT_EXIST
+                result['status'] = ''
+                result['err_desc'] = define.XC_ERR_STATE[define.XC_ERR_ORDER_NOT_EXIST]
+            else:
+                if record.data['retcd'] == '':
+                    req_str = self.build_req(syssn)
+                    resp_str = self.send(method=self.method, url=self.url, req_str=req_str, headers=self.headers)
+                    trade_update = self.parse_resp(resp_str)
+                    if trade_update:
+                        flag = self.update_trade(syssn=syssn, trade_update=trade_update)
+                        if not flag:
+                            result['retcd'] = define.XC_ERR_CHANNEL_QUERY
+                            result['status'] = record.data['status']
+                            result['cancel'] = record.data['cancel']
+                            result['err_desc'] = define.XC_ERR_STATE[define.XC_ERR_CHANNEL_QUERY]
+                        else:
+                            result['retcd'] = trade_update['retcd']
+                            result['status'] = trade_update['status']
+                            result['cancel'] = record.data['cancel']
+                            result['err_desc'] = trade_update['err_desc']
+                    else:
+                        result['retcd'] = define.XC_ERR_CHANNEL_QUERY
+                        result['status'] = record.data['status']
+                        result['cancel'] = record.data['cancel']
+                        result['err_desc'] = define.XC_ERR_STATE[define.XC_ERR_CHANNEL_QUERY]
+                else:
+                    result = {
+                        'retcd': record.data['retcd'],
+                        'status': record.data['status'],
+                        'cancel': record.data['cancel'],
+                        'err_desc': record.data['err_desc']
+                    }
+            log.info('func=run|normal|result=%s', result)
+        except Exception:
+            log.warn(traceback.format_exc())
+            result['retcd'] = define.XC_ERR_CHANNEL_QUERY
+            result['status'] = ''
+            result['cancel'] = ''
+            result['err_desc'] = define.XC_ERR_STATE[define.XC_ERR_CHANNEL_QUERY]
+            log.warn('func=run|exception|result=%s', result)
+            return result
