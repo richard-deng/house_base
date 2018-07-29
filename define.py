@@ -60,7 +60,7 @@ QUESTION_STATUS = {
 
 # 支付参数
 NOTIFY_URL = 'http://api.xunchengfangfu.com:80/v1/api/weixin/notify'
-
+REFUND_NOTIFY_URL = 'http://api.xunchengfangfu.com:80/v1/api/weixin/refund/notify'
 
 # ---- 交易状态 ----
 # 交易中

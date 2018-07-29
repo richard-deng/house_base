@@ -2,8 +2,10 @@
 import copy
 import logging
 import datetime
+import traceback
 
 import tools
+import define
 from define import TOKEN_HOUSE_CORE
 from zbase.base.dbpool import get_connection_exception
 from zbase.web.validator import T_INT, T_STR
@@ -114,3 +116,34 @@ class TradeOrder(object):
                     tools.trans_time(record, cls.DATETIME_KEY)
                     tools.trans_amt(record)
             return records
+
+    def update_refund_trade(self, trade_update, orig_trade_update):
+        log.info('func=update_refund_trade|trade_update=%s|orig_trade_update=%s', trade_update, orig_trade_update)
+        with get_connection_exception(TOKEN_HOUSE_CORE) as conn:
+            flag = True
+            try:
+                now_str = datetime.datetime.now().strftim('%Y-%m-%d %H:%M:%S')
+                trade_update['utime'] = now_str
+                orig_trade_update['utime'] = now_str
+                origssn = self.data['origssn']
+                orig_where = {'syssn': origssn, 'retcd': define.XC_OK, 'status': define.XC_TRADE_SUCC}
+                conn.start()
+                orig_ret = conn.update(table=self.TABLE, where=orig_where, values=orig_trade_update)
+                if orig_ret != 1:
+                    conn.rollback()
+                    flag = False
+                else:
+                    ret = conn.update(table=self.TABLE, where={'syssn': self.syssn}, values=trade_update)
+                    if ret != 1:
+                        conn.rollback()
+                        flag = False
+                    else:
+                        conn.commit()
+                log.info('func=update_refund_trade|normal|flag=%s', flag)
+                return flag
+            except Exception:
+                conn.rollback()
+                flag = False
+                log.warn(traceback.format_exc())
+                log.info('func=update_refund_trade|except|flag=%s', flag)
+                return flag

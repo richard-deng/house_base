@@ -1,6 +1,7 @@
 # coding: utf-8
 import json
 import uuid
+import json
 import types
 import time
 import urllib
@@ -314,7 +315,7 @@ class Query(Weixin):
                 result['status'] = ''
                 result['err_desc'] = define.XC_ERR_STATE[define.XC_ERR_ORDER_NOT_EXIST]
             else:
-                if record.data['retcd'] == '':
+                if record.data['retcd'] != '0000':
                     req_str = self.build_req(syssn)
                     resp_str = self.send(method=self.method, url=self.url, req_str=req_str, headers=self.headers)
                     trade_update = self.parse_resp(resp_str)
@@ -352,3 +353,201 @@ class Query(Weixin):
             result['err_desc'] = define.XC_ERR_STATE[define.XC_ERR_CHANNEL_QUERY]
             log.warn('func=run|exception|result=%s', result)
             return result
+
+
+class Refund(Weixin):
+
+    method = 'POST'
+    url = 'https://api.mch.weixin.qq.com/secapi/pay/refund'
+    headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+
+    def build_req(self, syssn, refund_syssn, txamt):
+        data = {
+            'appid': self.appid,
+            'mch_id': self.mch_id,
+            'nonce_str': self.gen_nonce_str(),
+            'sign': '',
+            'sign_type': 'MD5',
+            'out_trade_no': syssn,
+            'out_refund_no': refund_syssn,
+            'total_fee': txamt,
+            'refund_feee': txamt,
+            'notify_url': define.REFUND_NOTIFY_URL
+        }
+        sign = self.make_sign(data, self.api_key)
+        data['sign'] = sign
+        log.info("func=build_req|with sign data=%s", data)
+        xml_str = self.new_dict_to_xml(data)
+        log.info("func=build_req|xml_str=%s", xml_str)
+        return xml_str
+
+    def parse_resp(self, resp_str):
+        # 只是退款申请成功
+        obj = xmltodict.parse(resp_str, 'utf-8')
+        obj = obj['xml']
+        return_code = obj['return_code']
+        if return_code != 'SUCCESS':
+            return_msg = obj['return_msg']
+            return False, return_msg, None
+
+        err_code_des = obj['err_code_des']
+        result_code = obj['result_code']
+        if result_code != 'SUCCESS':
+            return False, err_code_des, None
+
+        return True, err_code_des, obj
+
+    def init_refund_trade(self, refund_syssn, openid, txamt, orig_trade):
+        sysdtm = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        trade_data = {
+            'syssn': refund_syssn,
+            'openid': openid,
+            'mchid': self.mch_id,
+            'txamt': txamt,
+            'origssn': orig_trade.data['syssn'],
+            'consumer_name': orig_trade.data['consumer_name'],
+            'consumer_mobile': orig_trade.data['consumer_mobile'],
+            'order_name': orig_trade.data['order_name'],
+            'order_desc': orig_trade.data['order_desc'],
+            'sysdtm': sysdtm,
+            'status': define.XC_TRADE_NOW,
+            'cancel': define.XC_CANCEL_NO
+        }
+        ret = TradeOrder.create(trade_data)
+        if ret == 1:
+            return True
+        return False
+
+    def judge_orig_trade(self, orig_trade, openid, txamt):
+        msg = ''
+
+        if not orig_trade.data:
+            msg = '订单号错误'
+            log.info('func=run|msg=%s', unicode(msg, 'utf-8'))
+            return False, msg
+
+        if orig_trade.data['openid'] != openid:
+            msg = '参数错误'
+            log.info('func=run|msg=%s', unicode(msg, 'utf-8'))
+            return False, msg
+
+        if txamt > orig_trade.data['txamt']:
+            msg = '金额错误'
+            log.info('func=run|msg=%s', unicode(msg, 'utf-8'))
+            return False, msg
+
+        orig_retcd = orig_trade.data['retcd']
+        orig_status = orig_trade.data['status']
+        orig_cancel = orig_trade.data['cancel']
+
+        if orig_cancel == define.XC_CANCEL_REFUND and orig_retcd == define.XC_OK:
+            msg = '原交易已退款成功'
+            log.info('func=run|msg=%s', unicode(msg, 'utf-8'))
+            return False, msg
+
+        if not all((orig_retcd == define.XC_OK, orig_status == define.XC_TRADE_SUCC, orig_cancel == define.XC_CANCEL_NO)):
+            # 原交易成功才能退款
+            msg = '原交易没有成功'
+            log.info('func=run|msg=%s', unicode(msg, 'utf-8'))
+            return False, msg
+
+        return True, msg
+
+    def run(self, openid, syssn, txamt):
+        msg = ''
+        log.info('class=%s|syssn=%s|txamt=%s', self.__class__.__name__, syssn, txamt)
+
+        # 先加载原交易判断
+        orig_trade = TradeOrder(syssn)
+        orig_flag, msg = self.judge_orig_trade(orig_trade, openid, txamt)
+        if not orig_flag:
+            return False, msg
+
+        refund_syssn = tools.create_syssn()
+        flag = self.init_refund_trade(refund_syssn=refund_syssn, openid=openid, txamt=txamt, orig_trade=orig_trade)
+        if not flag:
+            msg = '创建退款交易错误'
+            return False, msg
+
+        req_str = self.build_req(syssn, refund_syssn, txamt=txamt)
+        resp_str = self.send(method=self.method, url=self.url, req_str=req_str, headers=self.headers)
+        flag, msg, obj = self.parse_resp(resp_str)
+        if obj:
+            trade = TradeOrder(syssn=refund_syssn)
+            values = {'note': json.dumps(obj)}
+            trade.update(values=values)
+        return flag, msg
+
+
+class RefundQuery(Weixin):
+
+    method = 'POST'
+    url = 'https://api.mch.weixin.qq.com/pay/refundquery'
+    headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+
+    def build_req(self, syssn):
+        data = {
+            'appid': self.appid,
+            'mch_id': self.mch_id,
+            'nonce_str': self.gen_nonce_str(),
+            'sign': '',
+            'sign_type': 'MD5',
+            'out_refund_no': syssn,
+
+        }
+        sign = self.make_sign(data, self.api_key)
+        data['sign'] = sign
+        log.info("func=build_req|with sign data=%s", data)
+        xml_str = self.new_dict_to_xml(data)
+        log.info("func=build_req|xml_str=%s", xml_str)
+        return xml_str
+
+    def parse_resp(self, resp_str):
+        obj = xmltodict.parse(resp_str, 'utf-8')
+        obj = obj['xml']
+        return_code = obj['return_code']
+        if return_code != 'SUCCESS':
+            return_msg = obj['return_msg']
+            return False, return_msg, None
+
+        err_code_des = obj['err_code_des']
+        result_code = obj['result_code']
+        if result_code != 'SUCCESS':
+            return False, err_code_des, None
+
+        return True, err_code_des, obj
+
+    def run(self, syssn):
+        try:
+            trade_update ={}
+            orig_trade_update = {}
+            log.info('class=%s|func=run|syssn=%s', self.__class__.__name__, syssn)
+
+            trade = TradeOrder(syssn)
+            if not trade.data:
+                return False, u'订单号错误'
+
+            if trade.data['retcd'] == '0000':
+                return True, trade.data['err_desc']
+
+            req_str = self.build_req(syssn)
+            resp_str = self.send(method=self.method, url=self.url, req_str=req_str, headers=self.headers)
+            flag, msg, obj = self.parse_resp(resp_str)
+            if not flag:
+                return False, msg
+
+            refund_status_0 = obj['refund_status_0']
+
+            if refund_status_0 != 'SUCCESS':
+                return False, msg
+
+            trade_update['retcd'] = define.XC_OK
+            trade_update['status'] = define.XC_TRADE_SUCC
+            orig_trade_update['cancel'] = define.XC_CANCEL_REFUND
+            trade = TradeOrder(syssn)
+            flag = trade.update_refund_trade(trade_update=trade_update, orig_trade_update=orig_trade_update)
+            return flag, ''
+
+        except Exception:
+            log.warn(traceback.format_exc())
+            return False, u'查询异常'
