@@ -155,19 +155,39 @@ class TradeOrder(object):
     def page(cls, **kwargs):
         need_query = cls.QUERY_KEY.keys()
         where = {}
-        for k, v in kwargs.iteritems():
-            if k in need_query and kwargs.get(k):
-                where[k] = kwargs.get(k)
-        other = kwargs.get('other', '')
+
+        other = kwargs.get('other', ' order by sysdtm desc ')
         page = kwargs.get('page', 1)
         page_size = kwargs.get('maxnum', 10)
+
+        syssn = kwargs.get('syssn')
+        start_time = kwargs.get('start_time')
+        end_time = kwargs.get('end_time')
+
         log.debug('TRADE_ORDER_KEY=%s', cls.KEYS)
         keep_fields = copy.deepcopy(cls.KEYS)
         if cls.TABLE_ID not in keep_fields:
             keep_fields.append(cls.TABLE_ID)
         log.debug('keep_fields=%s', keep_fields)
-        with get_connection_exception(TOKEN_HOUSE_CORE) as conn:
-            sql = conn.select_sql(table=cls.TABLE, where=where, fields=keep_fields, other=other)
-            pager = conn.select_page(sql, pagecur=page, pagesize=page_size)
-            pager.split()
-            return pager.pagedata.data, pager.count
+
+        if syssn:
+            where['syssn'] = syssn
+            with get_connection_exception(TOKEN_HOUSE_CORE) as conn:
+                record = conn.select_one(table=cls.TABLE, fields=keep_fields, where=where)
+                if record:
+                    return record, 1
+                else:
+                    return [], 0
+        else:
+            for k, v in kwargs.iteritems():
+                if k in need_query and kwargs.get(k):
+                    where[k] = kwargs.get(k)
+
+            if start_time and end_time:
+                where.update({'sysdtm': ('between', (str(start_time), str(end_time)))})
+
+            with get_connection_exception(TOKEN_HOUSE_CORE) as conn:
+                sql = conn.select_sql(table=cls.TABLE, where=where, fields=keep_fields, other=other)
+                pager = conn.select_page(sql, pagecur=page, pagesize=page_size)
+                pager.split()
+                return pager.pagedata.data, pager.count
