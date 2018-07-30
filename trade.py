@@ -45,6 +45,8 @@ class TradeOrder(object):
     }
 
     QUERY_KEY = {
+        'openid': T_STR,
+        'sysdtm': T_STR,
     }
 
     KEYS = MUST_KEY.keys() + OPTION_KEY.keys() + DATETIME_KEY.keys()
@@ -148,3 +150,24 @@ class TradeOrder(object):
                 log.warn(traceback.format_exc())
                 log.info('func=update_refund_trade|except|flag=%s', flag)
                 return flag
+
+    @classmethod
+    def page(cls, **kwargs):
+        need_query = cls.QUERY_KEY.keys()
+        where = {}
+        for k, v in kwargs.iteritems():
+            if k in need_query and kwargs.get(k):
+                where[k] = kwargs.get(k)
+        other = kwargs.get('other', '')
+        page = kwargs.get('page', 1)
+        page_size = kwargs.get('maxnum', 10)
+        log.debug('TRADE_ORDER_KEY=%s', cls.KEYS)
+        keep_fields = copy.deepcopy(cls.KEYS)
+        if cls.TABLE_ID not in keep_fields:
+            keep_fields.append(cls.TABLE_ID)
+        log.debug('keep_fields=%s', keep_fields)
+        with get_connection_exception(TOKEN_HOUSE_CORE) as conn:
+            sql = conn.select_sql(table=cls.TABLE, where=where, fields=keep_fields, other=other)
+            pager = conn.select_page(sql, pagecur=page, pagesize=page_size)
+            pager.split()
+            return pager.pagedata.data, pager.count
