@@ -175,7 +175,7 @@ class TradeOrder(object):
             with get_connection_exception(TOKEN_HOUSE_CORE) as conn:
                 record = conn.select_one(table=cls.TABLE, fields=keep_fields, where=where)
                 if record:
-                    return record, 1
+                    return [record], 1
                 else:
                     return [], 0
         else:
