@@ -397,11 +397,11 @@ class Refund(Weixin):
 
         return True, err_code_des, obj
 
-    def init_refund_trade(self, refund_syssn, openid, txamt, orig_trade):
+    def init_refund_trade(self, refund_syssn, txamt, orig_trade):
         sysdtm = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         trade_data = {
             'syssn': refund_syssn,
-            'openid': openid,
+            'openid': orig_trade.data['openid'],
             'mchid': self.mch_id,
             'txamt': txamt,
             'origssn': orig_trade.data['syssn'],
@@ -418,16 +418,11 @@ class Refund(Weixin):
             return True
         return False
 
-    def judge_orig_trade(self, orig_trade, openid, txamt):
+    def judge_orig_trade(self, orig_trade, txamt):
         msg = ''
 
         if not orig_trade.data:
             msg = '订单号错误'
-            log.info('func=run|msg=%s', unicode(msg, 'utf-8'))
-            return False, msg
-
-        if orig_trade.data['openid'] != openid:
-            msg = '参数错误'
             log.info('func=run|msg=%s', unicode(msg, 'utf-8'))
             return False, msg
 
@@ -453,18 +448,18 @@ class Refund(Weixin):
 
         return True, msg
 
-    def run(self, openid, syssn, txamt):
+    def run(self, syssn, txamt):
         msg = ''
         log.info('class=%s|syssn=%s|txamt=%s', self.__class__.__name__, syssn, txamt)
 
         # 先加载原交易判断
         orig_trade = TradeOrder(syssn)
-        orig_flag, msg = self.judge_orig_trade(orig_trade, openid, txamt)
+        orig_flag, msg = self.judge_orig_trade(orig_trade, txamt)
         if not orig_flag:
             return False, msg
 
         refund_syssn = tools.create_syssn()
-        flag = self.init_refund_trade(refund_syssn=refund_syssn, openid=openid, txamt=txamt, orig_trade=orig_trade)
+        flag = self.init_refund_trade(refund_syssn=refund_syssn, txamt=txamt, orig_trade=orig_trade)
         if not flag:
             msg = '创建退款交易错误'
             return False, msg

@@ -107,8 +107,9 @@ class TradeOrder(object):
             'retcd', 'status', 'cancel', 'origssn',
             'sysdtm',
         ]
+        other = ' order by ctime desc '
         with get_connection_exception(TOKEN_HOUSE_CORE) as conn:
-            records = conn.select(table=cls.TABLE, fields=keep_fields, where=where)
+            records = conn.select(table=cls.TABLE, fields=keep_fields, where=where, other=other)
             log.info('openid=%s|records=%s', openid, records)
             if records:
                 for record in records:
