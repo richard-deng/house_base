@@ -91,6 +91,32 @@ class Questions:
             return records
 
     @classmethod
+    def load_current_children(cls, parent):
+        # 1是问题, 2是答案, 3是描述
+        where = {'parent': parent, 'status': define.QUESTION_ENABLE}
+        # keep_fields = copy.deepcopy(Questions.KEYS)
+        keep_fields = ['id', 'name', 'category']
+        if Questions.TABLE_ID not in keep_fields:
+            keep_fields.append(Questions.TABLE_ID)
+
+        with get_connection_exception(TOKEN_HOUSE_CORE) as conn:
+            records = conn.select(table=Questions.TABLE, fields=keep_fields, where=where)
+            if records:
+                for record in records:
+                    cls.to_string(record)
+                    record['text'] = record['name']
+                    if record['category'] == 1:
+                        record['icon'] = 'glyphicon glyphicon-question-sign'
+                    elif record['category'] == 2:
+                        record['icon'] = 'glyphicon glyphicon-info-sign'
+                    else:
+                        record['icon'] = 'glyphicon glyphicon-comment'
+                    record['children'] = True
+                    # record['children'] = []
+                    # record['children'].extend(cls.load_current_children(record.get('id')))
+            return records
+
+    @classmethod
     def load_all(cls):
         roots = cls.load_root()
         for root in roots:
