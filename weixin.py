@@ -293,10 +293,14 @@ class Query(Weixin):
             trade_update['retcd'] = define.XC_OK
             trade_update['status'] = define.XC_TRADE_SUCC
             trade_update['err_desc'] = trade_state_desc
+            now = datetime.datetime.now()
+            now_str = now.strftime("%Y-%m-%d %H:%M:%S")
+            trade_update['paydtm'] = now_str  
 
         return trade_update
 
     def update_trade(self, syssn, trade_update):
+
         to = TradeOrder(syssn=syssn)
         ret = to.update(trade_update)
         if ret == 1:

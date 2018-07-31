@@ -47,6 +47,8 @@ class TradeOrder(object):
     QUERY_KEY = {
         'openid': T_STR,
         'sysdtm': T_STR,
+        'consumer_name': T_STR,
+        'consumer_mobile': T_STR
     }
 
     KEYS = MUST_KEY.keys() + OPTION_KEY.keys() + DATETIME_KEY.keys()
