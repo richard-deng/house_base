@@ -5,6 +5,7 @@ import datetime
 
 from define import TOKEN_HOUSE_CORE, TEXT_TITLE_ENABLE
 from text_detail import TextDetail
+from box_list import BoxList
 from zbase.base.dbpool import get_connection_exception
 from zbase.web.validator import T_INT, T_STR
 from zbase.utils import createid
@@ -85,6 +86,7 @@ class TextInfo(object):
         values.update({'utime': now_str})
         with get_connection_exception(TOKEN_HOUSE_CORE) as conn:
             ret = conn.update(table=TextInfo.TABLE, values=values, where=where)
+            log.info('update|values=%s|where=%s|ret=%d', values, where, ret)
             return ret
 
     @classmethod
@@ -116,6 +118,42 @@ class TextInfo(object):
         log.debug('keep_fields=%s', keep_fields)
         with get_connection_exception(TOKEN_HOUSE_CORE) as conn:
             sql = conn.select_sql(table=TextInfo.TABLE, where=where, fields=keep_fields, other=other)
+            pager = conn.select_page(sql, pagecur=page, pagesize=page_size)
+            pager.split()
+            return pager.pagedata.data, pager.count
+
+    @classmethod
+    def page_new(cls, **kwargs):
+        where = {}
+        other = kwargs.get('other', ' order by ctime desc ')
+        page = kwargs.get('page', 1)
+        page_size = kwargs.get('maxnum', 10)
+        log.debug('KEYS=%s', cls.KEYS)
+        keep_fields = copy.deepcopy(cls.KEYS)
+        if TextInfo.TABLE_ID not in keep_fields:
+            keep_fields.append(cls.TABLE_ID)
+        log.debug('keep_fields=%s', keep_fields)
+        keep_fields = [cls.TABLE + '.' + item for item in keep_fields]
+        keep_fields.extend(['box_list.id as box_id', 'box_list.name as box_name'])
+        log.debug('new keep_fields=%s', keep_fields)
+
+        on = {'text_info.box_id': 'box_list.id'}
+
+        if 'name' in kwargs and kwargs['name']:
+            where['text_info.name'] = kwargs['name']
+
+        if 'box_name' in kwargs and kwargs['box_name']:
+            where['box_list.name'] = kwargs['box_name']
+
+        with get_connection_exception(TOKEN_HOUSE_CORE) as conn:
+            sql = conn.select_join_sql(
+                table1=cls.TABLE,
+                table2=BoxList.TABLE,
+                on=on,
+                fields=keep_fields,
+                where=where,
+                other=other,
+            )
             pager = conn.select_page(sql, pagecur=page, pagesize=page_size)
             pager.split()
             return pager.pagedata.data, pager.count

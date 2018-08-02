@@ -118,6 +118,8 @@ class TradeOrder(object):
             if records:
                 for record in records:
                     # cls.to_string(record)
+                    if record['retcd'] == '':
+                        record['retcd'] = define.XC_ERR_ORDER_WAIT_PAY
                     tools.trans_time(record, cls.DATETIME_KEY)
                     tools.trans_amt(record)
             return records
