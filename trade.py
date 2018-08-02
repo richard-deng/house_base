@@ -66,8 +66,11 @@ class TradeOrder(object):
 
         with get_connection_exception(TOKEN_HOUSE_CORE) as conn:
             record = conn.select_one(table=self.TABLE, fields=keep_fields, where=where)
+            # tools.trans_time(record, self.DATETIME_KEY)
+            tools.trans_amt(record)
             self.data = record
             self.to_string(self.data)
+
 
     def update(self, values):
         log.info('func=update|syssn=%s|values=%s', self.syssn, values)
