@@ -18,6 +18,17 @@ HOUSE_USER_STATE_MAP = {
     HOUSE_USER_STATE_OK: '已激活'
 }
 
+# 用户类型
+# 普通用户
+HOUSE_USER_TYPE_NORMAL = 0
+# 管理员
+HOUSE_USER_TYPE_ADMIN = 1
+
+HOUSE_USER_TYPE_MAP = {
+    HOUSE_USER_TYPE_NORMAL: '普通用户',
+    HOUSE_USER_TYPE_ADMIN: '管理员',
+}
+
 # DB TOKEN
 TOKEN_HOUSE_CORE = 'house_core'
 
