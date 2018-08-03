@@ -20,6 +20,7 @@ class TextInfo(object):
         'box_id': T_INT,
         'name': T_STR,
         'icon': T_STR,
+        'save_type': T_INT,
     }
     OPTION_KEY = {
         'available': T_INT,
