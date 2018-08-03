@@ -49,11 +49,11 @@ class Carousel:
             self.to_string(self.data)
 
     @classmethod
-    def to_string(self, data):
+    def to_string(cls, data):
         if not data:
             return
         data['id'] = str(data['id'])
-        tools.trans_time(data, self.DATETIME_KEY)
+        tools.trans_time(data, cls.DATETIME_KEY)
 
 
     def update(self, values):
@@ -76,6 +76,18 @@ class Carousel:
             values['id'] = table_id
             ret = conn.insert(table=cls.TABLE, values=values)
             return ret
+
+    @classmethod
+    def load_three_carousel(cls):
+        where = {'available': 1}
+        other = ' order by priority offset 0 limit 3 '
+        with get_connection_exception(TOKEN_HOUSE_CORE) as conn:
+            records = conn.select(table=cls.TABLE, where=where, other=other)
+            if records:
+                for record in records:
+                    record['id'] = str(item['id'])
+                    tools.trans_time(record, cls.DATETIME_KEY)
+            return records
 
     @classmethod
     def page(cls, **kwargs):
