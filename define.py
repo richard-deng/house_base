@@ -69,6 +69,17 @@ QUESTION_STATUS = {
     QUESTION_STATUS_DISABLE: '关闭'
 }
 
+# 文本存储类型
+# 富文本
+SAVE_TYPE_RICH = 1
+# 文件
+SAVE_TYPE_FILE = 2
+
+SAVE_TYPE_MAP = {
+    SAVE_TYPE_RICH: '富文本存储',
+    SAVE_TYPE_FILE: '文件存储',
+}
+
 # 支付参数
 NOTIFY_URL = 'http://api.xunchengfangfu.com:80/v1/api/weixin/notify'
 REFUND_NOTIFY_URL = 'http://api.xunchengfangfu.com:80/v1/api/weixin/refund/notify'
