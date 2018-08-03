@@ -80,12 +80,12 @@ class Carousel:
     @classmethod
     def load_three_carousel(cls):
         where = {'available': 1}
-        other = ' order by priority offset 0 limit 3 '
+        other = ' order by priority '
         with get_connection_exception(TOKEN_HOUSE_CORE) as conn:
             records = conn.select(table=cls.TABLE, where=where, other=other)
             if records:
                 for record in records:
-                    record['id'] = str(item['id'])
+                    record['id'] = str(record['id'])
                     tools.trans_time(record, cls.DATETIME_KEY)
             return records
 
