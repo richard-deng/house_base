@@ -23,6 +23,8 @@ class Questions:
     OPTION_KEY = {
         'category': T_INT,
         'status': T_INT,
+        'save_type': T_INT,
+        'content': T_STR,
     }
     DATETIME_KEY = {
         'ctime': 'datetime',
@@ -95,7 +97,7 @@ class Questions:
         # 1是问题, 2是答案, 3是描述
         where = {'parent': parent, 'status': define.QUESTION_ENABLE}
         # keep_fields = copy.deepcopy(Questions.KEYS)
-        keep_fields = ['id', 'name', 'category']
+        keep_fields = ['id', 'name', 'category', 'content', 'save_type']
         if Questions.TABLE_ID not in keep_fields:
             keep_fields.append(Questions.TABLE_ID)
 
