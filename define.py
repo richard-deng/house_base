@@ -84,6 +84,11 @@ SAVE_TYPE_MAP = {
     SAVE_TYPE_FILE: '文件存储',
 }
 
+
+# 横幅
+BANNER_ENABLE = 0
+BANNER_DISABLE = 1
+
 # 支付参数
 NOTIFY_URL = 'http://api.xunchengfangfu.com:80/v1/api/weixin/notify'
 REFUND_NOTIFY_URL = 'http://api.xunchengfangfu.com:80/v1/api/weixin/refund/notify'
