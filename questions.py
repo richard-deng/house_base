@@ -141,6 +141,11 @@ class Questions:
             if ret:
                 for data in ret:
                     cls.to_string(data)
+                    children = conn.select(table=Questions.TABLE, fields=keep_fields, where={'parent': data['id']})
+                    if children:
+                        data['leaf_node'] = False
+                    else:
+                        data['leaf_node'] = True
             return ret
 
     @classmethod
