@@ -59,14 +59,13 @@ class Banners:
 
     
     @classmethod
-    def load_all(cls):
+    def load_recent(cls):
         where = {'status': define.BANNER_ENABLE}
         other = ' order by ctime desc '
         with get_connection_exception(TOKEN_HOUSE_CORE) as conn:
-            records = conn.select(table=cls.TABLE,  where=where, other=other)
-            for record in records:
-                cls.to_string(record)
-            return records
+            record = conn.select_one(table=cls.TABLE,  where=where, other=other)
+            cls.to_string(record)
+            return record
 
     @classmethod
     def create(cls, values):
