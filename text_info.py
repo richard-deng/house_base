@@ -125,7 +125,7 @@ class TextInfo(object):
 
     @classmethod
     def page_new(cls, **kwargs):
-        where = {}
+        where = {'text_info.available': TEXT_TITLE_ENABLE}
         other = kwargs.get('other', ' order by ctime desc ')
         page = kwargs.get('page', 1)
         page_size = kwargs.get('maxnum', 10)
@@ -144,7 +144,8 @@ class TextInfo(object):
             where['text_info.name'] = kwargs['name']
 
         if 'box_name' in kwargs and kwargs['box_name']:
-            where['box_list.name'] = kwargs['box_name']
+            # where['box_list.name'] = kwargs['box_name']
+            where['box_list.name'] = ('like', '%' + str(kwargs['box_name']) + '%')
 
         with get_connection_exception(TOKEN_HOUSE_CORE) as conn:
             sql = conn.select_join_sql(
