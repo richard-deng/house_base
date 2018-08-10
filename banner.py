@@ -97,7 +97,7 @@ class Banners:
     @classmethod
     def page(cls, **kwargs):
         need_query = cls.QUERY_KEY.keys()
-        where = {}
+        where = {'status': define.BANNER_ENABLE}
         for k, v in kwargs.iteritems():
             if k in need_query and kwargs.get(k):
                 where[k] = kwargs.get(k)
