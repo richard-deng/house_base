@@ -54,7 +54,8 @@ class Questions:
 
     @classmethod
     def load_root(cls):
-        where = {'parent': -1, 'status': define.QUESTION_ENABLE}
+        # where = {'parent': -1, 'status': define.QUESTION_ENABLE}
+        where = {'parent': -1, 'status': ('in', define.QUESTION_VISIABLE)}
         # keep_fields = copy.deepcopy(Questions.KEYS)
         keep_fields = ['id', 'name', 'category']
         if Questions.TABLE_ID not in keep_fields:
@@ -70,7 +71,8 @@ class Questions:
     @classmethod
     def load_children(cls, parent):
         # 1是问题, 2是答案, 3是描述
-        where = {'parent': parent, 'status': define.QUESTION_ENABLE}
+        # where = {'parent': parent, 'status': define.QUESTION_ENABLE}
+        where = {'parent': parent, 'status': ('in', define.QUESTION_VISIABLE)}
         # keep_fields = copy.deepcopy(Questions.KEYS)
         keep_fields = ['id', 'name', 'category']
         if Questions.TABLE_ID not in keep_fields:
@@ -95,9 +97,9 @@ class Questions:
     @classmethod
     def load_current_children(cls, parent):
         # 1是问题, 2是答案, 3是描述
-        where = {'parent': parent, 'status': define.QUESTION_ENABLE}
+        where = {'parent': parent, 'status': ('in', define.QUESTION_VISIABLE)}
         # keep_fields = copy.deepcopy(Questions.KEYS)
-        keep_fields = ['id', 'name', 'category', 'content', 'save_type']
+        keep_fields = ['id', 'name', 'category', 'content', 'save_type', 'status']
         if Questions.TABLE_ID not in keep_fields:
             keep_fields.append(Questions.TABLE_ID)
 
@@ -107,12 +109,16 @@ class Questions:
                 for record in records:
                     cls.to_string(record)
                     record['text'] = record['name']
+                    status = record['status']
+                    record['type'] = define.QUESTION_STATUS_FRONT_DESC[status]
                     if record['category'] == 1:
                         record['icon'] = 'glyphicon glyphicon-question-sign'
                     elif record['category'] == 2:
                         record['icon'] = 'glyphicon glyphicon-info-sign'
                     else:
                         record['icon'] = 'glyphicon glyphicon-comment'
+                    if status == define.QUESTION_DISABLE:
+                        record['icon'] = "glyphicon glyphicon-remove"
                     record['children'] = True
                     # record['children'] = []
                     # record['children'].extend(cls.load_current_children(record.get('id')))
