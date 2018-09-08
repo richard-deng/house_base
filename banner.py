@@ -57,7 +57,7 @@ class Banners:
         data['id'] = str(data['id'])
         tools.trans_time(data, cls.DATETIME_KEY)
 
-    
+
     @classmethod
     def load_recent(cls):
         where = {'status': define.BANNER_ENABLE}
@@ -114,4 +114,4 @@ class Banners:
             pager = conn.select_page(sql, pagecur=page, pagesize=page_size)
             pager.split()
             return pager.pagedata.data, pager.count
-        
+
